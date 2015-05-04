@@ -1,1 +1,4 @@
-Queued.egg-info/
+*.pyc
+.DS_Store
+*.egg-info/
+*.egg/
