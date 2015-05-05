@@ -8,14 +8,15 @@ from .test_data import STANDARD_DATA, LARGE_DATA
 
 
 class TestQueuedMessages(unittest.TestCase):
-    def setUp(self):
-        self.owner = os.environ.get('AWS_OWNER')
-        self.application = 'queued'
-        self.subscriptions = ['parsley']
-        self.publications = ['parsley']
-        self.queued_message = QueuedMessage(
-            config={}, owner=self.owner, application=self.application,
-            publications=self.publications, subscriptions=self.subscriptions
+    @classmethod
+    def setUpClass(cls):
+        cls.owner = os.environ.get('AWS_OWNER')
+        cls.application = 'queued'
+        cls.subscriptions = ['parsley']
+        cls.publications = ['parsley']
+        cls.queued_message = QueuedMessage(
+            config={}, owner=cls.owner, application=cls.application,
+            publications=cls.publications, subscriptions=cls.subscriptions
         )
 
     def test_encode_standard(self):

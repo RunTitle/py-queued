@@ -6,16 +6,17 @@ from .test_data import STANDARD_DATA
 
 
 class TestQueuedManager(unittest.TestCase):
-    def setUp(self):
-        self.owner = os.environ.get('AWS_OWNER')
-        self.sns_name = 'arn:aws:sns:us-east-1:' + self.owner + ':rtq-test-value'
-        self.sqs_name = 'arn:aws:sqs:us-east-1:' + self.owner + ':rtq-test-value-queued'
-        self.application = 'queued'
-        self.subscriptions = ['parsley']
-        self.publications = ['parsley']
-        self.queued_manager = QueuedManager(
-            config={}, owner=self.owner, application=self.application,
-            publications=self.publications, subscriptions=self.subscriptions
+    @classmethod
+    def setUpClass(cls):
+        cls.owner = os.environ.get('AWS_OWNER')
+        cls.sns_name = 'arn:aws:sns:us-east-1:' + cls.owner + ':rtq-test-value'
+        cls.sqs_name = 'arn:aws:sqs:us-east-1:' + cls.owner + ':rtq-test-value-queued'
+        cls.application = 'queued'
+        cls.subscriptions = ['parsley']
+        cls.publications = ['parsley']
+        cls.queued_manager = QueuedManager(
+            config={}, owner=cls.owner, application=cls.application,
+            publications=cls.publications, subscriptions=cls.subscriptions
         )
 
     def test_sns_name(self):
@@ -49,6 +50,7 @@ class TestQueuedManager(unittest.TestCase):
         self.assertTrue('doc_type' in content)
         self.assertFalse(self.queued_manager.remove_message(self.subscriptions[0], message))
 
-    def tearDown(self):
-        self.queued_manager.delete_queue(self.subscriptions[0])
-        self.queued_manager.delete_topic(self.publications[0])
+    @classmethod
+    def tearDownClass(cls):
+        cls.queued_manager.delete_queue(cls.subscriptions[0])
+        cls.queued_manager.delete_topic(cls.publications[0])
