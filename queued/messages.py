@@ -29,13 +29,12 @@ class QueuedMessage(QueuedBase):
     def create(self, msg):
         message = json.dumps(msg)
         if len(message) >= self.maxSize:
-            return {'Message': self._put_S3(message)}
-        return {'Message': message}
+            return self._put_S3(message)
+        return message
 
     def decode(self, msg):
-        content = msg['Body']
-        message = json.loads(content)
-        details = json.loads(message['Message'])
+        content = json.loads(msg.get_body())
+        details = json.loads(content['Message'])
         if 'Bucket' in details and 'Key' in details:
             key_object = Key(self.conn.get_bucket(details['Bucket']))
             key_object.key = details['Key']

@@ -2,6 +2,7 @@ import os
 import unittest
 
 from ..manager import QueuedManager
+from .test_data import STANDARD_DATA
 
 
 class TestQueuedManager(unittest.TestCase):
@@ -32,3 +33,22 @@ class TestQueuedManager(unittest.TestCase):
 
     def test_delete_nonexistant_topic(self):
         self.assertFalse(self.queued_manager.delete_topic('bananas'))
+
+    def test_get_topic(self):
+        self.assertTrue(self.queued_manager.get_topic(self.publications[0]))
+
+    def test_get_queue(self):
+        self.assertTrue(self.queued_manager.get_queue(self.subscriptions[0]))
+
+    def test_publish_message(self):
+        self.assertTrue(self.queued_manager.publish_message(self.publications[0], STANDARD_DATA))
+
+    def test_receive_message(self):
+        message = self.queued_manager.receive_message(self.subscriptions[0])
+        content = self.queued_manager.messages.decode(message)
+        self.assertTrue('doc_type' in content)
+        self.assertFalse(self.queued_manager.remove_message(self.subscriptions[0], message))
+
+    def tearDown(self):
+        self.queued_manager.delete_queue(self.subscriptions[0])
+        self.queued_manager.delete_topic(self.publications[0])

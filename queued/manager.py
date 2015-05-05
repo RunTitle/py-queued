@@ -9,18 +9,20 @@ from .messages import QueuedMessage
 class QueuedManager(QueuedBase):
     def __init__(self, *args, **kwargs):
         super(QueuedManager, self).__init__(*args, **kwargs)
-        self._init_publications()
-        self._init_subscriptions()
-        self.messages = QueuedMessage(*args, **kwargs)
         self._cache = {'queues': {}, 'topics': {}}
+        self.messages = QueuedMessage(*args, **kwargs)
         self.sqs_conn = boto.sqs.connect_to_region(self.region)
         self.sns_conn = boto.sns.connect_to_region(self.region)
+        self._init_publications()
+        self._init_subscriptions()
 
     def _init_publications(self):
-        pass
+        for publication in self.publications:
+            self.get_topic(publication)
 
     def _init_subscriptions(self):
-        pass
+        for subscription in self.subscriptions:
+            self.subscribe_topic(subscription)
 
     def sqs_name(self, name):
         return '-'.join(['rtq', self.env, name, self.application])
@@ -38,7 +40,7 @@ class QueuedManager(QueuedBase):
         self.sns_conn.subscribe_sqs_queue(self.arn_name(name, 'sns'), self.get_queue(name))
 
     def get_topic(self, name):
-        self.sns_conn.create_topic(self.sns_name(name))
+        return self.sns_conn.create_topic(self.sns_name(name))
 
     def delete_topic(self, name):
         self.sns_conn.delete_topic(self.arn_name(name, 'sns'))
@@ -50,15 +52,26 @@ class QueuedManager(QueuedBase):
     def delete_queue(self, name):
         queue = self.sqs_conn.get_queue(self.sqs_name(name))
         if queue is not None:
-            self.sqs_conn.delete_queue(queue)
+            queue.delete()
 
-    def publish_message(self):
-        pass
+    def publish_message(self, name, raw_message):
+        msg = self.messages.create(raw_message)
+        return self.sns_conn.publish(self.arn_name(name, 'sns'), msg)
 
-    def receive_message(self):
-        pass
+    def receive_message(self, name):
+        queue = self.get_queue(name)
+        if queue is None:
+            return
+
+        messages = queue.get_messages(
+            num_messages=self.config['sqsListnerDefaults']['MaxNumberOfMessages'],
+            visibility_timeout=self.config['sqsListnerDefaults']['VisibilityTimeout'],
+            wait_time_seconds=self.config['sqsListnerDefaults']['WaitTimeSeconds'],
+        )
+        if messages:
+            return messages[0]
 
     def remove_message(self, name, message):
         queue = self.sqs_conn.get_queue(self.sqs_name(name))
         if queue is not None:
-            self.sqs_conn.delete_message(queue, message)
+            queue.delete_message(message)

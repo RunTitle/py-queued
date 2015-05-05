@@ -1,6 +1,7 @@
 import os
 import json
 import unittest
+from boto.sqs.message import Message
 
 from ..messages import QueuedMessage
 from .test_data import STANDARD_DATA, LARGE_DATA
@@ -19,12 +20,13 @@ class TestQueuedMessages(unittest.TestCase):
 
     def test_encode_standard(self):
         message = self.queued_message.create(STANDARD_DATA)
-        self.assertTrue(message.get('Message'))
-        decoded_message = self.queued_message.decode({'Body': json.dumps(message)})
+        decoded_message = self.queued_message.decode(
+            Message(body=json.dumps({'Message': message})))
         self.assertTrue(decoded_message.get('doc_type'))
 
     def test_encode_large(self):
         message = self.queued_message.create(LARGE_DATA)
-        self.assertEqual(json.loads(message['Message'])['Bucket'], self.queued_message.bucket)
-        decoded_message = self.queued_message.decode({'Body': json.dumps(message)})
+        self.assertEqual(json.loads(message)['Bucket'], self.queued_message.bucket)
+        decoded_message = self.queued_message.decode(
+            Message(body=json.dumps({'Message': message})))
         self.assertTrue(decoded_message.get('details'))
