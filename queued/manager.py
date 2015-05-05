@@ -1,5 +1,9 @@
 # _*_ coding: utf-8
+import boto.sqs
+import boto.sns
+
 from .base import QueuedBase
+from .messages import QueuedMessage
 
 
 class QueuedManager(QueuedBase):
@@ -7,6 +11,10 @@ class QueuedManager(QueuedBase):
         super(QueuedManager, self).__init__(*args, **kwargs)
         self._init_publications()
         self._init_subscriptions()
+        self.messages = QueuedMessage(*args, **kwargs)
+        self._cache = {'queues': {}, 'topics': {}}
+        self.sqs_conn = boto.sqs.connect_to_region(self.region)
+        self.sns_conn = boto.sns.connect_to_region(self.region)
 
     def _init_publications(self):
         pass
@@ -14,35 +22,35 @@ class QueuedManager(QueuedBase):
     def _init_subscriptions(self):
         pass
 
-    def sqs_name(self):
-        pass
+    def sqs_name(self, name):
+        return '-'.join(['rtq', self.env, name, self.application])
 
-    def sns_name(self):
-        pass
+    def sns_name(self, name):
+        return '-'.join(['rtq', self.env, name])
 
-    def arn_name(self, env):
-        return env
+    def arn_name(self, name, arn_type):
+        if arn_type == 'sns':
+            return ':'.join(['arn', 'aws', arn_type, self.region, self.owner, self.sns_name(name)])
 
-    def get_queue_url(self):
-        pass
+        return ':'.join(['arn', 'aws', arn_type, self.region, self.owner, self.sqs_name(name)])
 
-    def get_queue_name(self):
-        pass
+    def subscribe_topic(self, name):
+        self.sns_conn.subscribe_sqs_queue(self.arn_name(name, 'sns'), self.get_queue(name))
 
-    def authorize_sns(self):
-        pass
+    def get_topic(self, name):
+        self.sns_conn.create_topic(self.sns_name(name))
 
-    def get_topic(self):
-        pass
+    def delete_topic(self, name):
+        self.sns_conn.delete_topic(self.arn_name(name, 'sns'))
 
-    def delete_topic(self):
-        pass
+    def get_queue(self, name):
+        queue_name = self.sqs_name(name)
+        return self._cache['queues'].get(queue_name, self.sqs_conn.create_queue(queue_name))
 
-    def get_queue(self):
-        pass
-
-    def delete_queue(self):
-        pass
+    def delete_queue(self, name):
+        queue = self.sqs_conn.get_queue(self.sqs_name(name))
+        if queue is not None:
+            self.sqs_conn.delete_queue(queue)
 
     def publish_message(self):
         pass
@@ -50,5 +58,7 @@ class QueuedManager(QueuedBase):
     def receive_message(self):
         pass
 
-    def remove_message(self):
-        pass
+    def remove_message(self, name, message):
+        queue = self.sqs_conn.get_queue(self.sqs_name(name))
+        if queue is not None:
+            self.sqs_conn.delete_message(queue, message)

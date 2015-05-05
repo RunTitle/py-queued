@@ -1,7 +1,7 @@
 # _*_ coding: utf-8
 
 BASE_CONFIG = {
-    'environment': 'test',
+    'env': 'test',
     'region': 'us-east-1',
     's3ApiVersion': '2006-03-01',
     'sqsApiVersion': '2012-11-05',
@@ -23,9 +23,9 @@ class QueuedBase(object):
         self.application = application
         self.subscriptions = subscriptions
         self.publications = publications
-        self.environment = self.config['environment']
+        self.env = self.config['env']
         self.region = self.config['region']
         self.maxSize = self.config['maxSize']
         self.bucket = bucket
         if self.bucket is None:
-            self.bucket = 'queued-' + self.environment
+            self.bucket = 'queued-' + self.env

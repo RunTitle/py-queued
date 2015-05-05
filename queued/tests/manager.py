@@ -1,30 +1,34 @@
 import os
-import json
 import unittest
 
-from ..messages import QueuedMessage
-from .test_data import STANDARD_DATA, LARGE_DATA
+from ..manager import QueuedManager
 
 
 class TestQueuedManager(unittest.TestCase):
     def setUp(self):
         self.owner = os.environ.get('AWS_OWNER')
+        self.sns_name = 'arn:aws:sns:us-east-1:' + self.owner + ':rtq-test-value'
+        self.sqs_name = 'arn:aws:sqs:us-east-1:' + self.owner + ':rtq-test-value-queued'
         self.application = 'queued'
         self.subscriptions = ['parsley']
         self.publications = ['parsley']
-        self.queued_message = QueuedMessage(
+        self.queued_manager = QueuedManager(
             config={}, owner=self.owner, application=self.application,
             publications=self.publications, subscriptions=self.subscriptions
         )
 
-    def test_encode_standard(self):
-        message = self.queued_message.create(STANDARD_DATA)
-        self.assertTrue(message.get('Message'))
-        decoded_message = self.queued_message.decode({'Body': json.dumps(message)})
-        self.assertTrue(decoded_message.get('doc_type'))
+    def test_sns_name(self):
+        self.assertEqual(self.queued_manager.sns_name('value'), 'rtq-test-value')
 
-    def test_encode_large(self):
-        message = self.queued_message.create(LARGE_DATA)
-        self.assertEqual(json.loads(message['Message'])['Bucket'], self.queued_message.bucket)
-        decoded_message = self.queued_message.decode({'Body': json.dumps(message)})
-        self.assertTrue(decoded_message.get('details'))
+    def test_sqs_name(self):
+        self.assertEqual(self.queued_manager.sqs_name('value'), 'rtq-test-value-queued')
+
+    def test_arn_name(self):
+        self.assertEqual(self.queued_manager.arn_name('value', 'sns'), self.sns_name)
+        self.assertEqual(self.queued_manager.arn_name('value', 'sqs'), self.sqs_name)
+
+    def test_delete_nonexistant_queue(self):
+        self.assertFalse(self.queued_manager.delete_queue('bananas'))
+
+    def test_delete_nonexistant_topic(self):
+        self.assertFalse(self.queued_manager.delete_topic('bananas'))
