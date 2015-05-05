@@ -3,6 +3,11 @@ from .base import QueuedBase
 
 
 class QueuedManager(QueuedBase):
+    def __init__(self, *args, **kwargs):
+        super(QueuedManager, self).__init__(*args, **kwargs)
+        self._init_publications()
+        self._init_subscriptions()
+
     def _init_publications(self):
         pass
 
