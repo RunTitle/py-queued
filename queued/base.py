@@ -16,10 +16,15 @@ BASE_CONFIG = {
 
 
 class QueuedBase(object):
-    def __init__(self, config, owner, application, subscriptions=[], publications=[], bucket=None):
+    def __init__(
+            self, config, aws_owner, aws_access_key_id, aws_secret_access_key,
+            application, subscriptions=[], publications=[], bucket=None
+    ):
         self.config = BASE_CONFIG.copy()
         self.config.update(config)
-        self.owner = owner
+        self.aws_owner = aws_owner
+        self.aws_access_key_id = aws_access_key_id
+        self.aws_secret_access_key = aws_secret_access_key
         self.application = application
         self.subscriptions = subscriptions
         self.publications = publications

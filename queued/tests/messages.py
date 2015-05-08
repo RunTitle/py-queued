@@ -10,12 +10,16 @@ from .test_data import STANDARD_DATA, LARGE_DATA
 class TestQueuedMessages(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.owner = os.environ.get('AWS_OWNER')
+        cls.aws_owner = os.environ.get('AWS_OWNER')
+        cls.aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
+        cls.aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
         cls.application = 'queued'
         cls.subscriptions = ['parsley']
         cls.publications = ['parsley']
         cls.queued_message = QueuedMessage(
-            config={}, owner=cls.owner, application=cls.application,
+            config={}, aws_owner=cls.aws_owner, application=cls.application,
+            aws_access_key_id=cls.aws_access_key_id,
+            aws_secret_access_key=cls.aws_secret_access_key,
             publications=cls.publications, subscriptions=cls.subscriptions
         )
 

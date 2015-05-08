@@ -11,8 +11,14 @@ class QueuedManager(QueuedBase):
         super(QueuedManager, self).__init__(*args, **kwargs)
         self._cache = {'queues': {}, 'topics': {}}
         self.messages = QueuedMessage(*args, **kwargs)
-        self.sqs_conn = boto.sqs.connect_to_region(self.region)
-        self.sns_conn = boto.sns.connect_to_region(self.region)
+        self.sqs_conn = boto.sqs.connect_to_region(
+            aws_access_key_id=self.aws_access_key_id,
+            aws_secret_access_key=self.aws_secret_access_key,
+            region_name=self.region)
+        self.sns_conn = boto.sns.connect_to_region(
+            aws_access_key_id=self.aws_access_key_id,
+            aws_secret_access_key=self.aws_secret_access_key,
+            region_name=self.region)
         self._init_publications()
         self._init_subscriptions()
 
@@ -32,9 +38,10 @@ class QueuedManager(QueuedBase):
 
     def arn_name(self, name, arn_type):
         if arn_type == 'sns':
-            return ':'.join(['arn', 'aws', arn_type, self.region, self.owner, self.sns_name(name)])
+            return ':'.join(
+                ['arn', 'aws', arn_type, self.region, self.aws_owner, self.sns_name(name)])
 
-        return ':'.join(['arn', 'aws', arn_type, self.region, self.owner, self.sqs_name(name)])
+        return ':'.join(['arn', 'aws', arn_type, self.region, self.aws_owner, self.sqs_name(name)])
 
     def subscribe_topic(self, name):
         self.sns_conn.subscribe_sqs_queue(self.arn_name(name, 'sns'), self.get_queue(name))

@@ -11,7 +11,9 @@ class QueuedMessage(QueuedBase):
     def __init__(self, *args, **kwargs):
         super(QueuedMessage, self).__init__(*args, **kwargs)
         self.bucket_conn = None
-        self.conn = boto.connect_s3()
+        self.conn = boto.connect_s3(
+            aws_access_key_id=self.aws_access_key_id,
+            aws_secret_access_key=self.aws_secret_access_key)
         self._create_bucket()
 
     def _create_bucket(self):
