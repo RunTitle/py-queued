@@ -4,22 +4,9 @@ import boto3
 from .base import QueuedBase
 from .messages import QueuedMessage, QueuedLambdaMessage
 
-class LambdaQueuedManager(BaseQueuedManager):
-    def __init__(self, *args, **kwargs):
-        super(LambdaQueuedManager, self).__init__(*args, **kwargs)
-        self.messages = QueuedLambdaMessage(*args, **kwargs)
-
-# It would probably be better if this were named something like DefaultQueuedManager,
-# or CredentialedQueueManager. However, that would require changing the name for all
-# current users.
-class QueuedManager(BaseQueuedManager):
-    def __init__(self, *args, **kwargs):
-        super(QueuedManager, self).__init__(*args, **kwargs)
-        self.messages = QueuedMessage(*args, **kwargs)
-
 class BaseQueuedManager(QueuedBase):
     def __init__(self, *args, **kwargs):
-        super(QueuedManager, self).__init__(*args, **kwargs)
+        super(BaseQueuedManager, self).__init__(*args, **kwargs)
         self._cache = {'queues': {}, 'topics': {}}
         self.sqs = boto3.resource('sqs')
         self.sns = boto3.resource('sns')
@@ -88,3 +75,16 @@ class BaseQueuedManager(QueuedBase):
         queue = self.sqs_conn.get_queue(self.sqs_name(name))
         if queue is not None:
             queue.delete_message(message)
+
+# It would probably be better if this were named something like DefaultQueuedManager,
+# or CredentialedQueueManager. However, that would require changing the name for all
+# current users.
+class QueuedManager(BaseQueuedManager):
+    def __init__(self, *args, **kwargs):
+        super(QueuedManager, self).__init__(*args, **kwargs)
+        self.messages = QueuedMessage(*args, **kwargs)
+
+class LambdaQueuedManager(BaseQueuedManager):
+    def __init__(self, *args, **kwargs):
+        super(LambdaQueuedManager, self).__init__(*args, **kwargs)
+        self.messages = QueuedLambdaMessage(*args, **kwargs)
