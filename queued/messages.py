@@ -7,8 +7,24 @@ from boto.s3.key import Key
 
 from .base import QueuedBase
 
+class BaseQueuedMessage(QueuedBase):
+    def __init__(self, *args, **kwargs):
+        super(BaseQueuedMessage, self).__init__(*args, **kwargs)
 
-class QueuedMessage(QueuedBase):
+    def create(self, msg):
+        message = json.dumps(msg)
+        if len(message) >= self.maxSize:
+            return self._put_S3(message)
+        return message
+
+    def decode(self, msg):
+        content = json.loads(msg.get_body())
+        details = json.loads(content['Message'])
+        if 'Bucket' in details and 'Key' in details:
+            return json.loads(self._get_S3_message(details['Bucket'], details['Key']))
+        return details
+
+class QueuedMessage(BaseQueuedMessage):
     def __init__(self, *args, **kwargs):
         super(QueuedMessage, self).__init__(*args, **kwargs)
         self.bucket_conn = None
@@ -29,22 +45,12 @@ class QueuedMessage(QueuedBase):
         key_object.close()
         return json.dumps({'Bucket': self.bucket_name, 'Key': key})
 
-    def create(self, msg):
-        message = json.dumps(msg)
-        if len(message) >= self.maxSize:
-            return self._put_S3(message)
-        return message
+    def _get_S3_message(self, bucket, key):
+        key_object = Key(self.conn.get_bucket(bucket))
+        key_object.key = key
+        return key_object.get_contents_as_string()
 
-    def decode(self, msg):
-        content = json.loads(msg.get_body())
-        details = json.loads(content['Message'])
-        if 'Bucket' in details and 'Key' in details:
-            key_object = Key(self.conn.get_bucket(details['Bucket']))
-            key_object.key = details['Key']
-            return json.loads(key_object.get_contents_as_string())
-        return details
-
-class QueuedLambdaMessage(QueuedBase):
+class QueuedLambdaMessage(BaseQueuedMessage):
     def __init__(self, *args, **kwargs):
         super(QueuedLambdaMessage, self).__init__(*args, **kwargs)
         self.s3 = boto3.resource('s3')
@@ -56,16 +62,5 @@ class QueuedLambdaMessage(QueuedBase):
         self.s3.Object(self.bucket_name, key).put(Body=msg)
         return json.dumps({'Bucket': self.bucket_name, 'Key': key})
 
-    def create(self, msg):
-        message = json.dumps(msg)
-        if len(message) >= self.maxSize:
-            return self._put_S3(message)
-        return message
-
-    def decode(self, msg):
-        content = json.loads(msg.get_body())
-        details = json.loads(content['Message'])
-        if 'Bucket' in details and 'Key' in details:
-            obj = self.s3.Object(details['Bucket'], details['Key'])
-            return json.loads(obj.get())
-        return details
+    def _get_S3_message(self, bucket, key):
+        return self.s3.Object(bucket, key).get()
