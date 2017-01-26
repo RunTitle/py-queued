@@ -1,24 +1,15 @@
 # _*_ coding: utf-8
-import boto.sqs
-import boto.sns
+import boto3
 
 from .base import QueuedBase
-from .messages import QueuedMessage
+from .messages import QueuedMessage, QueuedLambdaMessage
 
-
-class QueuedManager(QueuedBase):
+class BaseQueuedManager(QueuedBase):
     def __init__(self, *args, **kwargs):
-        super(QueuedManager, self).__init__(*args, **kwargs)
+        super(BaseQueuedManager, self).__init__(*args, **kwargs)
         self._cache = {'queues': {}, 'topics': {}}
-        self.messages = QueuedMessage(*args, **kwargs)
-        self.sqs_conn = boto.sqs.connect_to_region(
-            aws_access_key_id=self.aws_access_key_id,
-            aws_secret_access_key=self.aws_secret_access_key,
-            region_name=self.region)
-        self.sns_conn = boto.sns.connect_to_region(
-            aws_access_key_id=self.aws_access_key_id,
-            aws_secret_access_key=self.aws_secret_access_key,
-            region_name=self.region)
+        self.sqs = boto3.resource('sqs')
+        self.sns = boto3.resource('sns')
         self._init_publications()
         self._init_subscriptions()
 
@@ -44,13 +35,14 @@ class QueuedManager(QueuedBase):
         return ':'.join(['arn', 'aws', arn_type, self.region, self.aws_owner, self.sqs_name(name)])
 
     def subscribe_topic(self, name):
-        self.sns_conn.subscribe_sqs_queue(self.arn_name(name, 'sns'), self.get_queue(name))
+        topic = self.sns.Topic(self.arn_name(name, 'sns'))
+        topic.subscribe(Protocol='sqs', Endpoint=self.get_queue(name))
 
     def get_topic(self, name):
-        return self.sns_conn.create_topic(self.sns_name(name))
+        return self.sns.create_topic(Name=self.sns_name(name))
 
     def delete_topic(self, name):
-        self.sns_conn.delete_topic(self.arn_name(name, 'sns'))
+        self.sns.delete_topic(self.arn_name(name, 'sns'))
 
     def get_queue(self, name):
         queue_name = self.sqs_name(name)
@@ -63,7 +55,8 @@ class QueuedManager(QueuedBase):
 
     def publish_message(self, name, raw_message):
         msg = self.messages.create(raw_message)
-        return self.sns_conn.publish(self.arn_name(name, 'sns'), msg)
+        topic = self.sns.Topic(self.arn_name(name, 'sns'))
+        return topic.publish(TopicArn=self.arn_name(name, 'sns'), Message=msg)
 
     def receive_message(self, name):
         queue = self.get_queue(name)
@@ -82,3 +75,16 @@ class QueuedManager(QueuedBase):
         queue = self.sqs_conn.get_queue(self.sqs_name(name))
         if queue is not None:
             queue.delete_message(message)
+
+# It would probably be better if this were named something like DefaultQueuedManager,
+# or CredentialedQueueManager. However, that would require changing the name for all
+# current users.
+class QueuedManager(BaseQueuedManager):
+    def __init__(self, *args, **kwargs):
+        super(QueuedManager, self).__init__(*args, **kwargs)
+        self.messages = QueuedMessage(*args, **kwargs)
+
+class LambdaQueuedManager(BaseQueuedManager):
+    def __init__(self, *args, **kwargs):
+        super(LambdaQueuedManager, self).__init__(*args, **kwargs)
+        self.messages = QueuedLambdaMessage(*args, **kwargs)
