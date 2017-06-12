@@ -46,10 +46,10 @@ class BaseQueuedManager(QueuedBase):
 
     def get_queue(self, name):
         queue_name = self.sqs_name(name)
-        return self._cache['queues'].get(queue_name, self.sqs_conn.create_queue(queue_name))
+        return self._cache['queues'].get(queue_name, self.sqs.create_queue(queue_name))
 
     def delete_queue(self, name):
-        queue = self.sqs_conn.get_queue(self.sqs_name(name))
+        queue = self.sqs.get_queue(self.sqs_name(name))
         if queue is not None:
             queue.delete()
 
@@ -72,7 +72,7 @@ class BaseQueuedManager(QueuedBase):
             return messages[0]
 
     def remove_message(self, name, message):
-        queue = self.sqs_conn.get_queue(self.sqs_name(name))
+        queue = self.sqs.get_queue(self.sqs_name(name))
         if queue is not None:
             queue.delete_message(message)
 
