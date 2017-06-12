@@ -8,8 +8,8 @@ class BaseQueuedManager(QueuedBase):
     def __init__(self, *args, **kwargs):
         super(BaseQueuedManager, self).__init__(*args, **kwargs)
         self._cache = {'queues': {}, 'topics': {}}
-        self.sqs = boto3.resource('sqs')
-        self.sns = boto3.resource('sns')
+        self.sqs = boto3.resource('sqs', region_name=self.region)
+        self.sns = boto3.resource('sns', region_name=self.region)
         self._init_publications()
         self._init_subscriptions()
 
